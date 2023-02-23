@@ -1,32 +1,56 @@
-from ultralytics import YOLO
-# from ultralytics.nn.autoshape import 
 import json
-from time import sleep
-model = YOLO("yolov8n-seg.pt")
+import os
 
-files = ["../../Data/", "../../Data/null", "../../Data/mouton.HEIC"]
+from ultralytics import YOLO
 
-predictions = []
-for file in files:
+MODEL = "yolov8n-seg.pt"
+PATH = "../../Data/"
+OUTPUT_FILE = "predictions.json"
 
-    results = model(file, stream=True, show=True)
 
-    try:
-        for result in results:
-            for box in result.boxes:
-                predictions.append({
-                    "status": "success",
-                    "class": model.names[int(box.cls)],
-                    "confidence": box.conf[0].numpy().item(),
-                    "filename": "waiting for response",
-                })
-        sleep(100)
-    except Exception as e:
-        predictions.append({
-            "status": "error",
-            "error_name": str(e.__class__.__name__),
-            "message": str(e),
-        })
-        
+def get_folder(parent_path=PATH):
+    path_subdir_lsit = [parent_path]
+    for root, folders, _ in os.walk(parent_path):
+        for folder in folders:
+            path_subdir_lsit.append(os.path.join(root, folder))
+    return path_subdir_lsit
 
-print(json.dumps(predictions))
+
+def get_prediction(files=PATH):
+    model = YOLO(MODEL)
+
+    predictions = []
+
+    for file in files:
+        results = model(file, stream=True, show=False)
+        try:
+            for result in results:
+                for box in result.boxes:
+                    predictions.append(
+                        {
+                            "status": "success",
+                            "class": model.names[int(box.cls)],
+                            "confidence": box.conf[0].numpy().item(),
+                            "filename": result.path,
+                        }
+                    )
+        except AttributeError as att_error:
+            predictions.append(
+                {
+                    "status": "error",
+                    "error_name": str(att_error.__class__.__name__),
+                    "message": str(att_error),
+                }
+            )
+    with open(OUTPUT_FILE, "w", encoding="UTF-8") as pred_file:
+        json.dump(predictions, pred_file, indent=4, ensure_ascii=False)
+
+
+def main():
+    files = get_folder()
+    print(files)
+    get_prediction(files)
+
+
+if __name__ == "__main__":
+    main()
