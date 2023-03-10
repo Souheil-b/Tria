@@ -48,7 +48,6 @@ def get_prediction(files=PATH):
 
 def main():
     files = get_folder()
-    print(files)
     get_prediction(files)
 
 
