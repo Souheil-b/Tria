@@ -1,0 +1,14 @@
+stages:
+  - test
+  - lint
+  - build
+
+variables:
+    IMAGE: public.ecr.aws/e8w6j2p2/tetracorp_eu:latest
+include:
+  - project: 'tetracorp/infra/ci-cd'
+    ref: main
+    file: "lint/pylint.yml"
+  - project: 'tetracorp/infra/ci-cd'
+    ref: main
+    file: "test/pytest.yml"

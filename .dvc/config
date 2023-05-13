@@ -1,0 +1,5 @@
+[core]
+    remote = tetra-dataset
+    autostage = true
+['remote "tetra-dataset"']
+    url = s3://tetra-dataset/

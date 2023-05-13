@@ -1,0 +1,6 @@
+{
+    "name": "Demo_IA",
+    "version": 0.1,
+    "cmd": "python main.py",
+    "args": "--path PATH"
+}
