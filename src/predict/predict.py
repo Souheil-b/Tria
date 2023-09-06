@@ -1,33 +1,13 @@
 """Predict the class of a list of images, and return a json file with the prediction"""
-import logging
-import os
+
+import json
 from sys import exit as sys_exit
+# from time import sleep
 
 from ultralytics import YOLO
 
-from src.file_generator import create_file, write_in_file
+from src.file_generator import create_file
 
-def get_folder(top_path) -> list:
-    """Get all subfolders of a folder
-
-    Args:
-        top_path (str): path of a folder
-
-    Returns:
-        list: list of subfolders
-    """
-    path_subdir_list = []
-    if not os.path.exists(top_path):
-        logging.error("Path %s does not exist", top_path)
-        sys_exit(84)
-    path_subdir_list.append(top_path)
-    for root, folders, _ in os.walk(top_path):
-        for folder_path in folders:
-            path = os.path.join(root, folder_path)
-            if os.path.exists(path):
-                path_subdir_list.append(path)
-    print(path_subdir_list)
-    return path_subdir_list
 
 def get_prediction(list_folder, model_file, output_file) -> None:
     """Get the prediction for a list of images
@@ -40,38 +20,52 @@ def get_prediction(list_folder, model_file, output_file) -> None:
     if not create_file(output_file):
         sys_exit(84)
     model = YOLO(model_file)
-    list_predictions = []
-    print(list_folder)
-    for folder in list_folder:
-        # stream=True to get the prediction for each image
-        # instead of trying to get all the predictions at once
-        # show=False to not show the image with the prediction
-        predictions = model(folder, stream=True, show=False)
-        try:
-            for result in predictions:
-                confidence = []
-                box_index = []
-                for box in result.boxes:
-                    confidence.append(box.conf[0].numpy().item())
-                    box_index.append(int(box.cls))
-                list_predictions.append(
+
+    def add_prdiction_to_json(file, dict_predictions) -> None:
+        """Add the prediction to the json file.
+        args:
+            file (file): json file
+            dict_predictions (dict): prediction
+        """
+        file.seek(0)
+        dict_predictions.append({
+        "status": "success",
+        "filename": result.path,
+        "detected": {
+            # pylint: disable=E1136
+            model.names[class_name]: float(f"{round(conf, 2):.2f}")
+            # pylint: enable=E1136
+            for class_name, conf in zip(box_index, confidence)
+                    },
+            }
+            )
+        json.dump(dict_predictions, file, indent=4)
+        file.truncate()
+
+
+    with open(output_file, 'r+', encoding='utf8') as file:
+        dict_predictions = []
+        for folder in list_folder:
+            # stream=True to get the prediction for each image
+            # instead of trying to get all the predictions at once
+            # show=False to not show the image with the prediction
+            predictions = model(folder, stream=True, show=False)
+            try:
+                for result in predictions:
+                    confidence = []
+                    box_index = []
+                    for box in result.boxes:
+                        confidence.append(box.conf[0].numpy().item())
+                        box_index.append(int(box.cls))
+                    add_prdiction_to_json(file, dict_predictions)
+            except AttributeError as att_error:
+                file.seek(0)
+                dict_predictions.append(
                     {
-                        "status": "success",
-                        "filename": result.path,
-                        "detected": {
-                            # pylint: disable=E1136
-                            model.names[class_name]: float(f"{round(conf, 2):.2f}")
-                            # pylint: enable=E1136
-                            for class_name, conf in zip(box_index, confidence)
-                        },
+                        "status": "error",
+                        "error_name": str(att_error.__class__.__name__),
+                        "message": str(att_error),
                     }
                 )
-        except AttributeError as att_error:
-            list_predictions.append(
-                {
-                    "status": "error",
-                    "error_name": str(att_error.__class__.__name__),
-                    "message": str(att_error),
-                }
-            )
-    write_in_file(output_file, list_predictions)
+                json.dump(dict_predictions, file, indent=4)
+                file.truncate()
