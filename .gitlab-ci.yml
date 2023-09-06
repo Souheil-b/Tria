@@ -4,7 +4,7 @@ stages:
   - build
 
 variables:
-    IMAGE: public.ecr.aws/e8w6j2p2/tetracorp_eu:latest
+    IMAGE: ultralytics/ultralytics
 include:
   - project: 'tetracorp/infra/ci-cd'
     ref: main
@@ -12,3 +12,42 @@ include:
   - project: 'tetracorp/infra/ci-cd'
     ref: main
     file: "test/pytest.yml"
+
+
+
+build:linux:
+  stage: build
+  image: ultralytics/ultralytics
+  before_script:
+    - pip install PyInstaller
+  script:
+    - pyinstaller --add-data "/usr/src/ultralytics/ultralytics:./ultralytics" --add-data "./Models:./Models" --add-data "./src:./src" --add-data "./config.ini:." --add-binary "/usr/lib/x86_64-linux-gnu/libGL*:." --add-binary "/usr/lib/x86_64-linux-gnu/libx*:." --hidden-import torchvision --hidden-import torch --clean --name TRIA main.py -y
+    - cd dist/
+    - zip -r ../TRIA.zip TRIA
+    - cd ../
+    - du -sh TRIA.zip
+  artifacts:
+    paths:
+      - TRIA.zip
+  only:
+    - dev
+    - master
+
+build:windows:
+  stage: build
+  tags:
+    - windowsduchauve
+  before_script:
+    - $Env:PATH += ";C:\Program Files\nodejs\;C:\ProgramData\Chocolatey\bin;C:\program files\python311\lib\site-packages;C:\Users\picasso\AppData\Local\Programs\Python\Python311\Scripts\;C:\Users\picasso\AppData\Local\Programs\Python\Python311\;"
+    - pip install pyinstaller
+    - pip install ultralytics
+    - pip install pillow
+  script:
+    - pyinstaller --add-data "C:\program files\python311\lib\site-packages\ultralytics;./ultralytics" --add-data "./Models;./Models" --add-data "./src;./src" --add-data "config.ini;." --hidden-import torchvision --hidden-import torch --name TRIA main.py -y
+    - Compress-Archive dist/TRIA TRIA.zip
+  artifacts:
+    paths:
+      - TRIA.zip
+  only:
+    - dev
+    - master

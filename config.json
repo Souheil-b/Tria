@@ -1,6 +1,5 @@
 {
-    "name": "Demo_IA",
+    "name": "TRIA",
     "version": 0.1,
-    "cmd": "python main.py",
-    "args": "--path PATH"
+    "cmd": "./TRIA"
 }
